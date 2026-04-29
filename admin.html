@@ -328,7 +328,7 @@ let currentPage = 'products';
 async function doLogin() {
   const email = document.getElementById('loginEmail').value;
   const pass  = document.getElementById('loginPass').value;
-  const { error } = await supabase.auth.signInWithPassword({ email, password: pass });
+  const { error } = await sb.auth.signInWithPassword({ email, password: pass });
   if (error) {
     document.getElementById('loginErr').style.display = 'block';
   } else {
@@ -337,13 +337,13 @@ async function doLogin() {
 }
 
 async function doLogout() {
-  await supabase.auth.signOut();
+  await sb.auth.signOut();
   document.getElementById('adminApp').style.display = 'none';
   document.getElementById('loginScreen').style.display = 'flex';
 }
 
 async function showAdmin() {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await sb.auth.getUser();
   if (!user) return;
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('adminApp').style.display = 'block';
@@ -391,7 +391,7 @@ async function loadProducts() {
 }
 
 async function loadCategories() {
-  const { data } = await supabase.from('categories').select('*').order('name');
+  const { data } = await sb.from('categories').select('*').order('name');
   categories = data || [];
   renderCatTable();
   populateCatSelect();
@@ -526,10 +526,10 @@ async function saveProduct() {
   let productId = id;
 
   if (id) {
-    await supabase.from('products').update(payload).eq('id', id);
-    await supabase.from('product_specs').delete().eq('product_id', id);
+    await sb.from('products').update(payload).eq('id', id);
+    await sb.from('product_specs').delete().eq('product_id', id);
   } else {
-    const { data } = await supabase.from('products').insert(payload).select().single();
+    const { data } = await sb.from('products').insert(payload).select().single();
     productId = data.id;
   }
 
@@ -540,7 +540,7 @@ async function saveProduct() {
     return { product_id: productId, label: inputs[0].value.trim(), value: inputs[1].value.trim(), sort_order: i };
   }).filter(s => s.label && s.value);
 
-  if (specs.length) await supabase.from('product_specs').insert(specs);
+  if (specs.length) await sb.from('product_specs').insert(specs);
 
   closeModal('productModal');
   await loadAll();
@@ -553,15 +553,15 @@ async function editProduct(id) {
 }
 
 async function toggleActive(id, current) {
-  await supabase.from('products').update({ is_active: !current }).eq('id', id);
+  await sb.from('products').update({ is_active: !current }).eq('id', id);
   await loadAll();
   showToast(`Produk ${!current ? 'diaktifkan' : 'disembunyikan'}.`);
 }
 
 async function deleteProduct(id) {
   if (!confirm('Hapus produk ini? Tindakan tidak bisa dibatalkan.')) return;
-  await supabase.from('product_specs').delete().eq('product_id', id);
-  await supabase.from('products').delete().eq('id', id);
+  await sb.from('product_specs').delete().eq('product_id', id);
+  await sb.from('products').delete().eq('id', id);
   await loadAll();
   showToast('Produk dihapus.');
 }
@@ -588,9 +588,9 @@ async function saveCat() {
   const name = document.getElementById('fCatName').value.trim();
   if (!name) { showToast('Nama kategori wajib diisi.'); return; }
   if (id) {
-    await supabase.from('categories').update({ name }).eq('id', id);
+    await sb.from('categories').update({ name }).eq('id', id);
   } else {
-    await supabase.from('categories').insert({ name });
+    await sb.from('categories').insert({ name });
   }
   closeModal('catModal');
   await loadAll();
@@ -599,7 +599,7 @@ async function saveCat() {
 
 async function deleteCat(id) {
   if (!confirm('Hapus kategori ini?')) return;
-  await supabase.from('categories').delete().eq('id', id);
+  await sb.from('categories').delete().eq('id', id);
   await loadAll();
   showToast('Kategori dihapus.');
 }
