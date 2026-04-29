@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — eCatalog PT. Saka NiagaSukses Abadi</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --brand:#1B4F72;--brand-light:#2980B9;--brand-accent:#E67E22;--brand-dark:#0D2B3E;
+    --bg:#F0F3F8;--white:#fff;--text:#1a2332;--muted:#6b7a8d;--border:#DDE3EC;
+    --danger:#E74C3C;--success:#27AE60;--warn:#F39C12;
+  }
+  body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--text)}
+
+  /* ===== LOGIN ===== */
+  #loginScreen{display:flex;min-height:100vh;align-items:center;justify-content:center;background:linear-gradient(135deg,#0D2B3E,#1B4F72)}
+  .login-card{background:var(--white);border-radius:16px;padding:2.5rem;width:100%;max-width:380px;box-shadow:0 20px 60px rgba(0,0,0,0.25)}
+  .login-logo{width:52px;height:52px;background:var(--brand-accent);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;color:#fff;margin:0 auto 1.2rem}
+  .login-card h2{text-align:center;font-size:20px;font-weight:700;margin-bottom:4px}
+  .login-card p{text-align:center;font-size:13px;color:var(--muted);margin-bottom:1.8rem}
+  .form-group{margin-bottom:1rem}
+  .form-group label{display:block;font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px}
+  .form-group input, .form-group select, .form-group textarea{width:100%;border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:14px;font-family:'Plus Jakarta Sans',sans-serif;outline:none;transition:border 0.2s;color:var(--text)}
+  .form-group input:focus, .form-group select:focus, .form-group textarea:focus{border-color:var(--brand-light)}
+  .btn-primary{width:100%;background:var(--brand);color:#fff;border:none;padding:11px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:background 0.2s}
+  .btn-primary:hover{background:var(--brand-light)}
+  .login-err{color:var(--danger);font-size:13px;text-align:center;margin-top:0.8rem;display:none}
+
+  /* ===== LAYOUT ===== */
+  #adminApp{display:none}
+  .sidebar{width:220px;background:var(--brand-dark);min-height:100vh;position:fixed;top:0;left:0;display:flex;flex-direction:column}
+  .sidebar-logo{padding:1.5rem 1.2rem;border-bottom:1px solid rgba(255,255,255,0.1)}
+  .sidebar-logo .mark{width:36px;height:36px;background:var(--brand-accent);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:#fff;margin-bottom:8px}
+  .sidebar-logo .co-name{color:#fff;font-size:12px;font-weight:600;line-height:1.4}
+  .sidebar-logo .co-role{color:rgba(255,255,255,0.45);font-size:10px;margin-top:2px}
+  .sidebar-nav{flex:1;padding:1rem 0}
+  .nav-item{display:flex;align-items:center;gap:10px;padding:10px 1.2rem;color:rgba(255,255,255,0.6);font-size:13px;cursor:pointer;transition:all 0.2s;border-left:3px solid transparent}
+  .nav-item:hover{color:#fff;background:rgba(255,255,255,0.06)}
+  .nav-item.active{color:#fff;background:rgba(255,255,255,0.08);border-left-color:var(--brand-accent)}
+  .nav-icon{font-size:16px;width:20px;text-align:center}
+  .sidebar-footer{padding:1.2rem;border-top:1px solid rgba(255,255,255,0.1)}
+  .logout-btn{width:100%;background:rgba(231,76,60,0.15);color:#E74C3C;border:1px solid rgba(231,76,60,0.3);border-radius:7px;padding:8px;font-size:13px;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:all 0.2s}
+  .logout-btn:hover{background:rgba(231,76,60,0.3)}
+
+  .main{margin-left:220px;padding:2rem;min-height:100vh}
+  .page-header{margin-bottom:1.5rem}
+  .page-header h1{font-size:22px;font-weight:700}
+  .page-header p{font-size:13px;color:var(--muted);margin-top:3px}
+
+  /* ===== STATS ===== */
+  .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.5rem}
+  .stat-card{background:var(--white);border-radius:12px;padding:1.2rem;border:1px solid var(--border)}
+  .stat-label{font-size:11px;text-transform:uppercase;letter-spacing:0.6px;color:var(--muted);margin-bottom:6px}
+  .stat-value{font-size:26px;font-weight:700;color:var(--text)}
+  .stat-sub{font-size:12px;color:var(--success);margin-top:3px}
+
+  /* ===== PANELS ===== */
+  .panel{background:var(--white);border-radius:12px;border:1px solid var(--border);overflow:hidden;display:none}
+  .panel.active{display:block}
+  .panel-header{display:flex;justify-content:space-between;align-items:center;padding:1.2rem 1.5rem;border-bottom:1px solid var(--border)}
+  .panel-title{font-size:15px;font-weight:600}
+  .btn-add{background:var(--brand);color:#fff;border:none;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:background 0.2s}
+  .btn-add:hover{background:var(--brand-light)}
+
+  /* ===== TABLE ===== */
+  table{width:100%;border-collapse:collapse}
+  thead{background:#F8FAFB}
+  th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);padding:10px 16px;font-weight:600;border-bottom:1px solid var(--border)}
+  td{padding:12px 16px;font-size:13px;border-bottom:1px solid var(--border);vertical-align:middle}
+  tr:last-child td{border:none}
+  tr:hover td{background:#F8FAFB}
+  .td-name{font-weight:600}
+  .td-img{width:48px;height:40px;object-fit:cover;border-radius:6px;background:var(--bg)}
+
+  /* ===== BADGES ===== */
+  .tag{font-size:10px;padding:3px 9px;border-radius:10px;font-weight:600}
+  .tag-cat{background:#EBF5FB;color:#1B4F72}
+  .tag-active{background:#EAFBF0;color:#27AE60}
+  .tag-inactive{background:#FDEDEC;color:#E74C3C}
+
+  /* ===== ACTION BTNS ===== */
+  .btn-edit{background:#EBF5FB;color:var(--brand);border:none;padding:5px 10px;border-radius:6px;font-size:11px;cursor:pointer;font-weight:600;font-family:'Plus Jakarta Sans',sans-serif;margin-right:4px}
+  .btn-del{background:#FDEDEC;color:var(--danger);border:none;padding:5px 10px;border-radius:6px;font-size:11px;cursor:pointer;font-weight:600;font-family:'Plus Jakarta Sans',sans-serif}
+  .btn-toggle{background:#FEF9E7;color:var(--warn);border:none;padding:5px 10px;border-radius:6px;font-size:11px;cursor:pointer;font-weight:600;font-family:'Plus Jakarta Sans',sans-serif;margin-right:4px}
+
+  /* ===== MODAL ===== */
+  .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;align-items:center;justify-content:center;padding:1rem}
+  .modal-overlay.open{display:flex}
+  .modal-box{background:var(--white);border-radius:14px;padding:2rem;width:100%;max-width:500px;max-height:90vh;overflow-y:auto;position:relative}
+  .modal-box h3{font-size:17px;font-weight:700;margin-bottom:1.5rem}
+  .modal-actions{display:flex;gap:8px;margin-top:1.5rem;justify-content:flex-end}
+  .btn-cancel{background:var(--bg);border:1px solid var(--border);color:var(--text);padding:9px 18px;border-radius:8px;font-size:13px;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif}
+  .btn-save{background:var(--brand);color:#fff;border:none;padding:9px 20px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif}
+  .btn-save:hover{background:var(--brand-light)}
+
+  /* ===== TOAST ===== */
+  .toast{position:fixed;bottom:2rem;right:2rem;background:#1a2332;color:#fff;padding:12px 18px;border-radius:10px;font-size:13px;z-index:999;transform:translateY(80px);opacity:0;transition:all 0.3s}
+  .toast.show{transform:translateY(0);opacity:1}
+
+  .specs-list .spec-row{display:flex;gap:8px;margin-bottom:6px;align-items:center}
+  .specs-list .spec-row input{flex:1;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:'Plus Jakarta Sans',sans-serif}
+  .spec-del{background:var(--bg);border:1px solid var(--border);color:var(--danger);padding:5px 10px;border-radius:6px;cursor:pointer;font-size:12px}
+  .btn-add-spec{background:transparent;border:1px dashed var(--border);color:var(--muted);padding:6px 14px;border-radius:6px;font-size:12px;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;margin-top:4px;transition:all 0.2s;width:100%}
+  .btn-add-spec:hover{border-color:var(--brand);color:var(--brand)}
+
+  @media(max-width:900px){
+    .sidebar{width:200px}
+    .main{margin-left:200px;padding:1.2rem}
+    .stats-grid{grid-template-columns:repeat(2,1fr)}
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== LOGIN ===== -->
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="login-logo">S</div>
+    <h2>Admin Panel</h2>
+    <p>PT. Saka NiagaSukses Abadi</p>
+    <div class="form-group">
+      <label>Email</label>
+      <input type="email" id="loginEmail" placeholder="admin@email.com">
+    </div>
+    <div class="form-group">
+      <label>Password</label>
+      <input type="password" id="loginPass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="btn-primary" onclick="doLogin()">Masuk</button>
+    <div class="login-err" id="loginErr">Email atau password salah.</div>
+  </div>
+</div>
+
+<!-- ===== ADMIN APP ===== -->
+<div id="adminApp">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-logo">
+      <div class="mark">S</div>
+      <div class="co-name">PT. Saka NiagaSukses Abadi</div>
+      <div class="co-role">Admin Panel</div>
+    </div>
+    <div class="sidebar-nav">
+      <div class="nav-item active" onclick="showPage('products')">
+        <span class="nav-icon">📦</span> Produk
+      </div>
+      <div class="nav-item" onclick="showPage('categories')">
+        <span class="nav-icon">🗂</span> Kategori
+      </div>
+      <div class="nav-item" onclick="showPage('inquiries')">
+        <span class="nav-icon">💬</span> Permintaan
+      </div>
+      <div class="nav-item" onclick="window.open('index.html','_blank')">
+        <span class="nav-icon">🌐</span> Lihat Catalog
+      </div>
+    </div>
+    <div class="sidebar-footer">
+      <div style="font-size:12px;color:rgba(255,255,255,0.4);margin-bottom:8px" id="adminEmail"></div>
+      <button class="logout-btn" onclick="doLogout()">Keluar</button>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="page-header">
+      <h1 id="pageTitle">Manajemen Produk</h1>
+      <p id="pageDesc">Tambah, edit, dan kelola produk eCatalog</p>
+    </div>
+
+    <!-- STATS -->
+    <div class="stats-grid" id="statsGrid">
+      <div class="stat-card">
+        <div class="stat-label">Total Produk</div>
+        <div class="stat-value" id="statTotal">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Produk Aktif</div>
+        <div class="stat-value" id="statActive">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Kategori</div>
+        <div class="stat-value" id="statCat">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Stok Habis</div>
+        <div class="stat-value" id="statOut">—</div>
+        <div class="stat-sub" style="color:var(--warn)">Perlu restok</div>
+      </div>
+    </div>
+
+    <!-- PRODUCTS PANEL -->
+    <div class="panel active" id="productsPanel">
+      <div class="panel-header">
+        <div class="panel-title">Daftar Produk</div>
+        <button class="btn-add" onclick="openProductModal()">+ Tambah Produk</button>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Foto</th>
+            <th>Nama Produk</th>
+            <th>Kategori</th>
+            <th>Stok</th>
+            <th>Status</th>
+            <th>Aksi</th>
+          </tr>
+        </thead>
+        <tbody id="productTableBody">
+          <tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--muted)">Memuat...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- CATEGORIES PANEL -->
+    <div class="panel" id="categoriesPanel">
+      <div class="panel-header">
+        <div class="panel-title">Kategori Produk</div>
+        <button class="btn-add" onclick="openCatModal()">+ Tambah Kategori</button>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Nama Kategori</th>
+            <th>Jumlah Produk</th>
+            <th>Aksi</th>
+          </tr>
+        </thead>
+        <tbody id="catTableBody">
+          <tr><td colspan="3" style="text-align:center;padding:2rem;color:var(--muted)">Memuat...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- INQUIRIES PANEL -->
+    <div class="panel" id="inquiriesPanel">
+      <div class="panel-header">
+        <div class="panel-title">Log Permintaan</div>
+      </div>
+      <div style="padding:2rem;text-align:center;color:var(--muted);font-size:14px">
+        <p>Fitur log permintaan akan tersedia setelah integrasi form kontak.</p>
+        <p style="margin-top:8px;font-size:12px">Saat ini permintaan masuk via WhatsApp ke (0361) 461 688</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== PRODUCT MODAL ===== -->
+<div class="modal-overlay" id="productModal" onclick="closeIfBg(event,'productModal')">
+  <div class="modal-box">
+    <h3 id="productModalTitle">Tambah Produk</h3>
+    <input type="hidden" id="editProductId">
+    <div class="form-group">
+      <label>Nama Produk *</label>
+      <input type="text" id="fName" placeholder="Contoh: Triplek 18mm">
+    </div>
+    <div class="form-group">
+      <label>Kategori *</label>
+      <select id="fCat"></select>
+    </div>
+    <div class="form-group">
+      <label>Deskripsi</label>
+      <textarea id="fDesc" rows="3" placeholder="Deskripsi produk..."></textarea>
+    </div>
+    <div class="form-group">
+      <label>URL Foto</label>
+      <input type="url" id="fImg" placeholder="https://...">
+    </div>
+    <div class="form-group">
+      <label>Spesifikasi Produk</label>
+      <div class="specs-list" id="specsList"></div>
+      <button class="btn-add-spec" onclick="addSpecRow()">+ Tambah Spesifikasi</button>
+    </div>
+    <div class="form-group" style="display:flex;align-items:center;gap:10px">
+      <input type="checkbox" id="fAvailable" checked style="width:auto">
+      <label for="fAvailable" style="text-transform:none;letter-spacing:0;font-size:14px;color:var(--text)">Stok Tersedia</label>
+    </div>
+    <div class="form-group" style="display:flex;align-items:center;gap:10px">
+      <input type="checkbox" id="fActive" checked style="width:auto">
+      <label for="fActive" style="text-transform:none;letter-spacing:0;font-size:14px;color:var(--text)">Tampilkan di Catalog</label>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('productModal')">Batal</button>
+      <button class="btn-save" onclick="saveProduct()">Simpan</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== CATEGORY MODAL ===== -->
+<div class="modal-overlay" id="catModal" onclick="closeIfBg(event,'catModal')">
+  <div class="modal-box">
+    <h3 id="catModalTitle">Tambah Kategori</h3>
+    <input type="hidden" id="editCatId">
+    <div class="form-group">
+      <label>Nama Kategori *</label>
+      <input type="text" id="fCatName" placeholder="Contoh: Atap & Dinding">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('catModal')">Batal</button>
+      <button class="btn-save" onclick="saveCat()">Simpan</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// =============================================
+// KONFIGURASI SUPABASE
+// =============================================
+const SUPABASE_URL = 'https://sna-ecatalog.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9pbGZpYmhmaW53bWt4cnl0d29uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0NDIwNjUsImV4cCI6MjA5MzAxODA2NX0.ErDJnLciFltzyFuQwkvvfRODYmENzP2-wcGADJwmZco';
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let products = [];
+let categories = [];
+let currentPage = 'products';
+
+// =============================================
+// AUTH
+// =============================================
+async function doLogin() {
+  const email = document.getElementById('loginEmail').value;
+  const pass  = document.getElementById('loginPass').value;
+  const { error } = await supabase.auth.signInWithPassword({ email, password: pass });
+  if (error) {
+    document.getElementById('loginErr').style.display = 'block';
+  } else {
+    showAdmin();
+  }
+}
+
+async function doLogout() {
+  await supabase.auth.signOut();
+  document.getElementById('adminApp').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
+}
+
+async function showAdmin() {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('adminApp').style.display = 'block';
+  document.getElementById('adminEmail').textContent = user.email;
+  await loadAll();
+}
+
+// =============================================
+// NAVIGATION
+// =============================================
+function showPage(page) {
+  currentPage = page;
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById(page + 'Panel').classList.add('active');
+
+  const titles = {
+    products: ['Manajemen Produk', 'Tambah, edit, dan kelola produk eCatalog'],
+    categories: ['Kategori Produk', 'Kelola kategori untuk pengelompokan produk'],
+    inquiries: ['Log Permintaan', 'Riwayat permintaan dari customer']
+  };
+  document.getElementById('pageTitle').textContent  = titles[page][0];
+  document.getElementById('pageDesc').textContent   = titles[page][1];
+  document.getElementById('statsGrid').style.display = page === 'products' ? 'grid' : 'none';
+}
+
+// =============================================
+// LOAD DATA
+// =============================================
+async function loadAll() {
+  await loadCategories();
+  await loadProducts();
+  updateStats();
+}
+
+async function loadProducts() {
+  const { data } = await supabase
+    .from('products')
+    .select('*, categories(name)')
+    .order('name');
+  products = data || [];
+  renderProductTable();
+}
+
+async function loadCategories() {
+  const { data } = await supabase.from('categories').select('*').order('name');
+  categories = data || [];
+  renderCatTable();
+  populateCatSelect();
+}
+
+// =============================================
+// STATS
+// =============================================
+function updateStats() {
+  document.getElementById('statTotal').textContent  = products.length;
+  document.getElementById('statActive').textContent = products.filter(p => p.is_active).length;
+  document.getElementById('statCat').textContent    = categories.length;
+  document.getElementById('statOut').textContent    = products.filter(p => !p.is_available).length;
+}
+
+// =============================================
+// PRODUCT TABLE
+// =============================================
+function renderProductTable() {
+  const tbody = document.getElementById('productTableBody');
+  if (!products.length) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--muted)">Belum ada produk.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = products.map(p => `
+    <tr>
+      <td>${p.image_url
+        ? `<img class="td-img" src="${p.image_url}" onerror="this.style.opacity=0.2">`
+        : `<div class="td-img" style="background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:20px">📦</div>`}
+      </td>
+      <td class="td-name">${p.name}</td>
+      <td><span class="tag tag-cat">${p.categories?.name || '—'}</span></td>
+      <td>${p.is_available ? '✓ Tersedia' : '<span style="color:var(--danger)">✗ Habis</span>'}</td>
+      <td><span class="tag ${p.is_active ? 'tag-active' : 'tag-inactive'}">${p.is_active ? 'Aktif' : 'Nonaktif'}</span></td>
+      <td>
+        <button class="btn-edit" onclick="editProduct(${p.id})">Edit</button>
+        <button class="btn-toggle" onclick="toggleActive(${p.id},${p.is_active})">${p.is_active ? 'Sembunyikan' : 'Aktifkan'}</button>
+        <button class="btn-del" onclick="deleteProduct(${p.id})">Hapus</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+// =============================================
+// CATEGORY TABLE
+// =============================================
+function renderCatTable() {
+  const tbody = document.getElementById('catTableBody');
+  if (!categories.length) {
+    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;padding:2rem;color:var(--muted)">Belum ada kategori.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = categories.map(c => {
+    const count = products.filter(p => p.category_id === c.id).length;
+    return `
+      <tr>
+        <td class="td-name">${c.name}</td>
+        <td>${count} produk</td>
+        <td>
+          <button class="btn-edit" onclick="editCat(${c.id},'${c.name}')">Edit</button>
+          <button class="btn-del" onclick="deleteCat(${c.id})">Hapus</button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function populateCatSelect() {
+  const sel = document.getElementById('fCat');
+  sel.innerHTML = categories.map(c =>
+    `<option value="${c.id}">${c.name}</option>`
+  ).join('');
+}
+
+// =============================================
+// PRODUCT MODAL
+// =============================================
+function openProductModal(p = null) {
+  document.getElementById('productModalTitle').textContent = p ? 'Edit Produk' : 'Tambah Produk';
+  document.getElementById('editProductId').value = p?.id || '';
+  document.getElementById('fName').value    = p?.name || '';
+  document.getElementById('fDesc').value    = p?.description || '';
+  document.getElementById('fImg').value     = p?.image_url || '';
+  document.getElementById('fAvailable').checked = p ? p.is_available : true;
+  document.getElementById('fActive').checked    = p ? p.is_active : true;
+  if (p) document.getElementById('fCat').value  = p.category_id;
+  document.getElementById('specsList').innerHTML = '';
+  if (p) loadSpecsForEdit(p.id);
+  document.getElementById('productModal').classList.add('open');
+}
+
+async function loadSpecsForEdit(productId) {
+  const { data } = await supabase
+    .from('product_specs')
+    .select('*')
+    .eq('product_id', productId)
+    .order('sort_order');
+  (data || []).forEach(s => addSpecRow(s.label, s.value));
+}
+
+function addSpecRow(label = '', value = '') {
+  const div = document.createElement('div');
+  div.className = 'spec-row';
+  div.innerHTML = `
+    <input type="text" placeholder="Label (misal: Ukuran)" value="${label}">
+    <input type="text" placeholder="Nilai (misal: 122x244 cm)" value="${value}">
+    <button class="spec-del" onclick="this.parentElement.remove()">✕</button>
+  `;
+  document.getElementById('specsList').appendChild(div);
+}
+
+async function saveProduct() {
+  const id      = document.getElementById('editProductId').value;
+  const name    = document.getElementById('fName').value.trim();
+  const catId   = document.getElementById('fCat').value;
+  const desc    = document.getElementById('fDesc').value.trim();
+  const imgUrl  = document.getElementById('fImg').value.trim();
+  const avail   = document.getElementById('fAvailable').checked;
+  const active  = document.getElementById('fActive').checked;
+
+  if (!name) { showToast('Nama produk wajib diisi.'); return; }
+
+  const payload = {
+    name,
+    category_id: catId,
+    description: desc,
+    image_url: imgUrl,
+    is_available: avail,
+    is_active: active
+  };
+
+  let productId = id;
+
+  if (id) {
+    await supabase.from('products').update(payload).eq('id', id);
+    await supabase.from('product_specs').delete().eq('product_id', id);
+  } else {
+    const { data } = await supabase.from('products').insert(payload).select().single();
+    productId = data.id;
+  }
+
+  // Save specs
+  const rows = document.querySelectorAll('#specsList .spec-row');
+  const specs = [...rows].map((r, i) => {
+    const inputs = r.querySelectorAll('input');
+    return { product_id: productId, label: inputs[0].value.trim(), value: inputs[1].value.trim(), sort_order: i };
+  }).filter(s => s.label && s.value);
+
+  if (specs.length) await supabase.from('product_specs').insert(specs);
+
+  closeModal('productModal');
+  await loadAll();
+  showToast(id ? 'Produk berhasil diperbarui.' : 'Produk berhasil ditambahkan.');
+}
+
+async function editProduct(id) {
+  const p = products.find(x => x.id === id);
+  if (p) openProductModal(p);
+}
+
+async function toggleActive(id, current) {
+  await supabase.from('products').update({ is_active: !current }).eq('id', id);
+  await loadAll();
+  showToast(`Produk ${!current ? 'diaktifkan' : 'disembunyikan'}.`);
+}
+
+async function deleteProduct(id) {
+  if (!confirm('Hapus produk ini? Tindakan tidak bisa dibatalkan.')) return;
+  await supabase.from('product_specs').delete().eq('product_id', id);
+  await supabase.from('products').delete().eq('id', id);
+  await loadAll();
+  showToast('Produk dihapus.');
+}
+
+// =============================================
+// CATEGORY MODAL
+// =============================================
+function openCatModal() {
+  document.getElementById('catModalTitle').textContent = 'Tambah Kategori';
+  document.getElementById('editCatId').value = '';
+  document.getElementById('fCatName').value = '';
+  document.getElementById('catModal').classList.add('open');
+}
+
+function editCat(id, name) {
+  document.getElementById('catModalTitle').textContent = 'Edit Kategori';
+  document.getElementById('editCatId').value = id;
+  document.getElementById('fCatName').value = name;
+  document.getElementById('catModal').classList.add('open');
+}
+
+async function saveCat() {
+  const id   = document.getElementById('editCatId').value;
+  const name = document.getElementById('fCatName').value.trim();
+  if (!name) { showToast('Nama kategori wajib diisi.'); return; }
+  if (id) {
+    await supabase.from('categories').update({ name }).eq('id', id);
+  } else {
+    await supabase.from('categories').insert({ name });
+  }
+  closeModal('catModal');
+  await loadAll();
+  showToast(id ? 'Kategori diperbarui.' : 'Kategori ditambahkan.');
+}
+
+async function deleteCat(id) {
+  if (!confirm('Hapus kategori ini?')) return;
+  await supabase.from('categories').delete().eq('id', id);
+  await loadAll();
+  showToast('Kategori dihapus.');
+}
+
+// =============================================
+// MODAL UTILS
+// =============================================
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+
+function closeIfBg(e, id) {
+  if (e.target === document.getElementById(id)) closeModal(id);
+}
+
+// =============================================
+// TOAST
+// =============================================
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// =============================================
+// INIT — Check session
+// =============================================
+(async () => {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session) {
+    showAdmin();
+  }
+})();
+</script>
+</body>
+</html>
