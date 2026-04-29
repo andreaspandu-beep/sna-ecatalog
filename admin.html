@@ -315,7 +315,6 @@
 // =============================================
 const SUPABASE_URL = 'https://oilfibhfinwmkxrytwon.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9pbGZpYmhmaW53bWt4cnl0d29uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0NDIwNjUsImV4cCI6MjA5MzAxODA2NX0.ErDJnLciFltzyFuQwkvvfRODYmENzP2-wcGADJwmZco';
-// const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 let products = [];
@@ -382,7 +381,7 @@ async function loadAll() {
 }
 
 async function loadProducts() {
-  const { data } = await supabase
+  const { data } = await sb
     .from('products')
     .select('*, categories(name)')
     .order('name');
@@ -484,7 +483,7 @@ function openProductModal(p = null) {
 }
 
 async function loadSpecsForEdit(productId) {
-  const { data } = await supabase
+  const { data } = await sb
     .from('product_specs')
     .select('*')
     .eq('product_id', productId)
