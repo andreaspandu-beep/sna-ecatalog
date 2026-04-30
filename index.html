@@ -197,19 +197,21 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// Nomor WhatsApp perusahaan (tanpa + dan spasi)
-const WA_NUMBER = '62361461688';
+// Nomor WA default (fallback jika region tidak dipilih / tidak ada PIC)
+const WA_DEFAULT    = '62361461688';
+const WA_NAME_DEFAULT = 'Customer Service';
 
 // =============================================
 // STATE
 // =============================================
-let activeRegion = 'ALL';
-let allProducts = [];
-let allCategories = [];
-let allRegions = [];             // { id, name, code }
-let blockedCatIds = new Set();  // category_id yang di-blok untuk region aktif
-let activeFilter = 'Semua';
-let searchTerm = '';
+let activeRegion    = 'ALL';
+let activeRegionPIC = null;    // { pic_name, wa_number } untuk region aktif
+let allRegions      = [];
+let blockedCatIds   = new Set();
+let allProducts     = [];
+let allCategories   = [];
+let activeFilter    = 'Semua';
+let searchTerm      = '';
 
 // =============================================
 // LOAD DATA
@@ -333,8 +335,14 @@ function filterProducts() {
 async function setRegion() {
   activeRegion = document.getElementById('regionSelect').value;
   blockedCatIds = new Set();
+  activeRegionPIC = null;
 
   if (activeRegion !== 'ALL') {
+    const region = allRegions.find(r => String(r.id) === String(activeRegion));
+    if (region && region.pic_name) {
+      activeRegionPIC = { pic_name: region.pic_name, wa_number: region.wa_number };
+    }
+
     // Ambil kategori yang diblok untuk region ini
     const { data } = await sb
       .from('region_category_rules')
@@ -344,7 +352,45 @@ async function setRegion() {
     (data || []).forEach(r => blockedCatIds.add(r.category_id));
   }
 
+  renderPICBanner();
   renderGrid();
+}
+
+function renderPICBanner() {
+  let banner = document.getElementById('picBanner');
+  if (!activeRegionPIC) {
+    if (banner) banner.remove();
+    return;
+  }
+  const wa = activeRegionPIC.wa_number.replace(/\D/g, '').replace(/^0/, '62');
+  const html = `
+    <div id="picBanner" style="
+      background:linear-gradient(90deg,#1B4F72,#2980B9);
+      padding:10px 1.5rem;
+      display:flex;align-items:center;justify-content:space-between;
+      flex-wrap:wrap;gap:8px;
+    ">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="width:34px;height:34px;background:rgba(255,255,255,0.2);border-radius:50%;
+          display:flex;align-items:center;justify-content:center;font-size:16px">👤</div>
+        <div>
+          <div style="color:rgba(255,255,255,0.7);font-size:10px;text-transform:uppercase;letter-spacing:0.6px">Sales Representative</div>
+          <div style="color:#fff;font-size:13px;font-weight:600">${activeRegionPIC.pic_name}</div>
+        </div>
+      </div>
+      <a href="https://wa.me/${wa}?text=${encodeURIComponent('Halo, saya ingin bertanya mengenai produk katalog.')}"
+        target="_blank"
+        style="background:#25D366;color:#fff;border-radius:8px;padding:7px 14px;
+          font-size:12px;font-weight:600;text-decoration:none;display:flex;align-items:center;gap:6px;">
+        💬 Chat ${activeRegionPIC.pic_name}
+      </a>
+    </div>
+  `;
+  if (banner) {
+    banner.outerHTML = html;
+  } else {
+    document.getElementById('filterBtns').insertAdjacentHTML('beforebegin', html);
+  }
 }
 
 // =============================================
@@ -384,7 +430,9 @@ async function openModal(id) {
       <div class="modal-desc">${p.description || 'Hubungi kami untuk informasi lebih lanjut.'}</div>
       <div class="modal-specs">${specsHtml}</div>
       <div class="modal-actions">
-        <button class="wa-btn" onclick="inquire('${p.name}')">💬 Hubungi via WhatsApp</button>
+        <button class="wa-btn" onclick="inquire('${p.name.replace(/'/g, "\\'")}')">
+          💬 ${activeRegionPIC ? 'Chat ' + activeRegionPIC.pic_name : 'Hubungi via WhatsApp'}
+        </button>
         <button class="close-btn" onclick="closeModal()">Tutup</button>
       </div>
     </div>
@@ -407,7 +455,11 @@ function inquire(name) {
   const msg = encodeURIComponent(
     `Halo, saya ingin menanyakan informasi dan harga untuk produk:\n\n*${name}*\n\nMohon informasinya. Terima kasih.`
   );
-  window.open(`https://wa.me/${WA_NUMBER}?text=${msg}`, '_blank');
+  let number = WA_NUMBER;
+  if (activeRegionPIC && activeRegionPIC.wa_number) {
+    number = activeRegionPIC.wa_number.replace(/\D/g, '').replace(/^0/, '62');
+  }
+  window.open(`https://wa.me/${number}?text=${msg}`, '_blank');
 }
 
 // =============================================
