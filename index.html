@@ -130,6 +130,17 @@
 <!-- ===== SEARCH ===== -->
 <div class="toolbar">
   <input type="text" id="searchInput" placeholder="🔍  Cari produk... (triplek, pipa, besi...)" oninput="filterProducts()">
+  <select id="regionSelect" onchange="setRegion()" style="
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:8px 10px;
+    font-size:14px;
+    background:#F8FAFB;
+  ">
+    <option value="ALL">All Regional</option>
+    <option value="BALI">Bali</option>
+    <option value="KALTIM">Kalimantan Timur</option>
+    <option value="NTTNTB">NTT - NTB</option>
 </div>
 
 <!-- ===== FILTERS ===== -->
@@ -190,6 +201,7 @@ const WA_NUMBER = '62361461688';
 // =============================================
 // STATE
 // =============================================
+let activeRegion = 'ALL';
 let allProducts = [];
 let allCategories = [];
 let activeFilter = 'Semua';
@@ -246,7 +258,22 @@ function renderGrid() {
       || p.name.toLowerCase().includes(s)
       || (p.description || '').toLowerCase().includes(s)
       || p.cat.toLowerCase().includes(s);
-    return matchCat && matchSearch;
+    // FILTER REGIONAL
+  let blocked = false;
+
+  if (activeRegion === 'BALI') {
+    if (['Cat', 'Triplek/Plywood'].includes(p.cat)) blocked = true;
+  }
+
+  if (activeRegion === 'KALTIM') {
+    if (['Paku', 'Kawat', 'Seng'].includes(p.cat)) blocked = true;
+  }
+
+  if (activeRegion === 'NTTNTB') {
+    if (['Cat'].includes(p.cat)) blocked = true;
+  }
+
+  return matchCat && matchSearch && !blocked;
   });
 
   document.getElementById('countDisplay').textContent = filtered.length;
@@ -295,6 +322,11 @@ function setFilter(cat) {
 
 function filterProducts() {
   searchTerm = document.getElementById('searchInput').value;
+  renderGrid();
+}
+
+function setRegion() {
+  activeRegion = document.getElementById('regionSelect').value;
   renderGrid();
 }
 
