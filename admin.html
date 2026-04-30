@@ -360,6 +360,10 @@
       <input type="text" id="fRegionName" placeholder="Contoh: Bali, Kalimantan Timur">
     </div>
     <div class="form-group">
+      <label>Nama PIC / Sales</label>
+      <input type="text" id="fRegionPIC" placeholder="Contoh: AdiBali">
+    </div>
+    <div class="form-group">
       <label>Nomor WhatsApp PIC</label>
       <input type="text" id="fRegionWA" placeholder="Contoh: 081234567890">
       <div style="font-size:11px;color:var(--muted);margin-top:4px">Format bebas, awalan 0 atau 62 sama-sama bisa</div>
@@ -702,7 +706,7 @@ function renderRegionTable() {
       <td><span class="tag ${r.is_active ? 'tag-active' : 'tag-inactive'}">${r.is_active ? 'Aktif' : 'Nonaktif'}</span></td>
       <td>
         <button class="btn-edit" onclick="openRuleEditor(${r.id},'${r.name.replace(/'/g,"\\'")}')">⚙ Atur Kategori</button>
-        <button class="btn-edit" onclick="editRegion(${r.id},'${r.name.replace(/'/g,"\\'")}',${r.is_active})">Edit</button>
+        <button class="btn-edit" onclick="editRegion(${r.id})">Edit</button>
         <button class="btn-del"  onclick="deleteRegion(${r.id})">Hapus</button>
       </td>
     </tr>
@@ -774,21 +778,23 @@ async function saveRules() {
 
 function openRegionModal() {
   document.getElementById('regionModalTitle').textContent = 'Tambah Regional';
-  document.getElementById('editRegionId').value = '';
-  document.getElementById('fRegionName').value  = '';
+  document.getElementById('editRegionId').value    = '';
+  document.getElementById('fRegionName').value     = '';
   document.getElementById('fRegionPIC').value      = '';
   document.getElementById('fRegionWA').value       = '';
   document.getElementById('fRegionActive').checked = true;
   document.getElementById('regionModal').classList.add('open');
 }
 
-function editRegion(id, name, isActive) {
+function editRegion(id) {
+  const r = regions.find(x => x.id === id);
+  if (!r) return;
   document.getElementById('regionModalTitle').textContent = 'Edit Regional';
-  document.getElementById('editRegionId').value    = id;
-  document.getElementById('fRegionName').value     = name;
+  document.getElementById('editRegionId').value    = r.id;
+  document.getElementById('fRegionName').value     = r.name;
   document.getElementById('fRegionPIC').value      = r.pic_name || '';
   document.getElementById('fRegionWA').value       = r.wa_number || '';
-  document.getElementById('fRegionActive').checked = isActive;
+  document.getElementById('fRegionActive').checked = r.is_active;
   document.getElementById('regionModal').classList.add('open');
 }
 
@@ -802,9 +808,9 @@ async function saveRegion() {
 
   const payload = { name, pic_name: picName || null, wa_number: waNumber || null, is_active: isActive };
   if (id) {
-    await sb.from('regions').update({ name, is_active: isActive }).eq('id', id);
+    await sb.from('regions').update(payload).eq('id', id);
   } else {
-    await sb.from('regions').insert({ name, is_active: isActive });
+    await sb.from('regions').insert(payload);
   }
   closeModal('regionModal');
   await loadRegions();
