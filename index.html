@@ -190,22 +190,20 @@
 <script>
 // =============================================
 // KONFIGURASI SUPABASE
-// Ganti dengan URL dan ANON KEY project Anda
 // =============================================
-const SUPABASE_URL = 'https://oilfibhfinwmkxrytwon.supabase.co';
+const SUPABASE_URL     = 'https://oilfibhfinwmkxrytwon.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9pbGZpYmhmaW53bWt4cnl0d29uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0NDIwNjUsImV4cCI6MjA5MzAxODA2NX0.ErDJnLciFltzyFuQwkvvfRODYmENzP2-wcGADJwmZco';
+const sb               = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-// Nomor WA default (fallback jika region tidak dipilih / tidak ada PIC)
-const WA_DEFAULT    = '62361461688';
+// Nomor & nama WA fallback (dipakai saat belum pilih regional)
+const WA_DEFAULT      = '62361461688';
 const WA_NAME_DEFAULT = 'Customer Service';
 
 // =============================================
 // STATE
 // =============================================
 let activeRegion    = 'ALL';
-let activeRegionPIC = null;    // { pic_name, wa_number } untuk region aktif
+let activeRegionPIC = null;    // { pic_name, wa_number } region aktif
 let allRegions      = [];
 let blockedCatIds   = new Set();
 let allProducts     = [];
@@ -272,13 +270,12 @@ function renderFilters() {
 // =============================================
 function renderGrid() {
   const filtered = allProducts.filter(p => {
-    const matchCat = activeFilter === 'Semua' || p.cat === activeFilter;
-    const s = searchTerm.toLowerCase();
+    const matchCat    = activeFilter === 'Semua' || p.cat === activeFilter;
+    const s           = searchTerm.toLowerCase();
     const matchSearch = !s
       || p.name.toLowerCase().includes(s)
       || (p.description || '').toLowerCase().includes(s)
       || p.cat.toLowerCase().includes(s);
-    // Filter regional — blockedCatIds diisi saat setRegion()
     const matchRegion = !blockedCatIds.has(p.category_id);
     return matchCat && matchSearch && matchRegion;
   });
@@ -292,10 +289,10 @@ function renderGrid() {
   }
 
   document.getElementById('productsGrid').innerHTML = filtered.map(p => {
-    const hasImg = p.image_url && p.image_url.trim() !== '';
+    const hasImg    = p.image_url && p.image_url.trim() !== '';
     const stockClass = p.is_available !== false ? 'stock-available' : 'stock-empty';
     const stockLabel = p.is_available !== false ? '✓ Tersedia' : '✗ Habis';
-    const desc = (p.description || '').substring(0, 85);
+    const desc       = (p.description || '').substring(0, 85);
 
     return `
       <div class="product-card" onclick="openModal(${p.id})">
@@ -309,7 +306,7 @@ function renderGrid() {
         <div class="product-desc">${desc}${desc.length >= 85 ? '…' : ''}</div>
         <div class="product-footer">
           <span class="stock-badge ${stockClass}">${stockLabel}</span>
-          <button class="inquiry-btn" onclick="event.stopPropagation();inquire('${p.name}')">
+          <button class="inquiry-btn" onclick="event.stopPropagation();inquire('${p.name.replace(/'/g,"\\'")}')">
             Tanya Harga
           </button>
         </div>
@@ -333,11 +330,12 @@ function filterProducts() {
 }
 
 async function setRegion() {
-  activeRegion = document.getElementById('regionSelect').value;
-  blockedCatIds = new Set();
+  activeRegion    = document.getElementById('regionSelect').value;
+  blockedCatIds   = new Set();
   activeRegionPIC = null;
 
   if (activeRegion !== 'ALL') {
+    // Ambil data PIC region yang dipilih
     const region = allRegions.find(r => String(r.id) === String(activeRegion));
     if (region && region.pic_name) {
       activeRegionPIC = { pic_name: region.pic_name, wa_number: region.wa_number };
@@ -356,13 +354,19 @@ async function setRegion() {
   renderGrid();
 }
 
+// =============================================
+// BANNER PIC REGIONAL
+// =============================================
 function renderPICBanner() {
   let banner = document.getElementById('picBanner');
+
   if (!activeRegionPIC) {
     if (banner) banner.remove();
     return;
   }
-  const wa = activeRegionPIC.wa_number.replace(/\D/g, '').replace(/^0/, '62');
+
+  const wa  = activeRegionPIC.wa_number.replace(/\D/g, '').replace(/^0/, '62');
+  const msg = encodeURIComponent('Halo, saya ingin bertanya mengenai produk katalog.');
   const html = `
     <div id="picBanner" style="
       background:linear-gradient(90deg,#1B4F72,#2980B9);
@@ -378,14 +382,14 @@ function renderPICBanner() {
           <div style="color:#fff;font-size:13px;font-weight:600">${activeRegionPIC.pic_name}</div>
         </div>
       </div>
-      <a href="https://wa.me/${wa}?text=${encodeURIComponent('Halo, saya ingin bertanya mengenai produk katalog.')}"
-        target="_blank"
+      <a href="https://wa.me/${wa}?text=${msg}" target="_blank"
         style="background:#25D366;color:#fff;border-radius:8px;padding:7px 14px;
           font-size:12px;font-weight:600;text-decoration:none;display:flex;align-items:center;gap:6px;">
         💬 Chat ${activeRegionPIC.pic_name}
       </a>
     </div>
   `;
+
   if (banner) {
     banner.outerHTML = html;
   } else {
@@ -400,7 +404,6 @@ async function openModal(id) {
   const p = allProducts.find(x => x.id === id);
   if (!p) return;
 
-  // Load specs dari Supabase
   const { data: specs } = await sb
     .from('product_specs')
     .select('label, value, sort_order')
@@ -416,6 +419,12 @@ async function openModal(id) {
     : '<div style="font-size:13px;color:var(--muted)">Spesifikasi belum tersedia.</div>';
 
   const hasImg = p.image_url && p.image_url.trim() !== '';
+
+  // Label tombol WA sesuai PIC regional
+  const picLabel = activeRegionPIC
+    ? `💬 Hubungi ${activeRegionPIC.pic_name} via WhatsApp`
+    : '💬 Hubungi via WhatsApp';
+
   document.getElementById('modalContent').innerHTML = `
     <div class="modal-img-wrap">
       ${hasImg
@@ -430,8 +439,8 @@ async function openModal(id) {
       <div class="modal-desc">${p.description || 'Hubungi kami untuk informasi lebih lanjut.'}</div>
       <div class="modal-specs">${specsHtml}</div>
       <div class="modal-actions">
-        <button class="wa-btn" onclick="inquire('${p.name.replace(/'/g, "\\'")}')">
-          💬 ${activeRegionPIC ? 'Chat ' + activeRegionPIC.pic_name : 'Hubungi via WhatsApp'}
+        <button class="wa-btn" onclick="inquire('${p.name.replace(/'/g,"\\'")}')">
+          ${picLabel}
         </button>
         <button class="close-btn" onclick="closeModal()">Tutup</button>
       </div>
@@ -455,7 +464,8 @@ function inquire(name) {
   const msg = encodeURIComponent(
     `Halo, saya ingin menanyakan informasi dan harga untuk produk:\n\n*${name}*\n\nMohon informasinya. Terima kasih.`
   );
-  let number = WA_NUMBER;
+  // Gunakan nomor PIC regional jika ada, fallback ke nomor default
+  let number = WA_DEFAULT;
   if (activeRegionPIC && activeRegionPIC.wa_number) {
     number = activeRegionPIC.wa_number.replace(/\D/g, '').replace(/^0/, '62');
   }
