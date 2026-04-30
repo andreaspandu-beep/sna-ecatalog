@@ -299,7 +299,9 @@ function renderBrandFilters() {
 
 function setBrand(brandId) {
   activeBrand = brandId;
+  activeFilter = 'Semua';
   renderBrandFilters();
+  renderFilters();
   renderGrid();
 }
 
@@ -363,7 +365,9 @@ function renderGrid() {
 // =============================================
 function setFilter(cat) {
   activeFilter = cat;
+  activeBrand = 'Semua';
   renderFilters();
+  renderBrandFilters();
   renderGrid();
 }
 
