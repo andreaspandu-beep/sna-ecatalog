@@ -257,12 +257,14 @@
         <thead>
           <tr>
             <th>Nama Regional</th>
+            <th>PIC / Sales</th>
+            <th>No. WhatsApp</th>
             <th>Status</th>
             <th>Aksi</th>
           </tr>
         </thead>
         <tbody id="regionTableBody">
-          <tr><td colspan="3" style="text-align:center;padding:2rem;color:var(--muted)">Memuat...</td></tr>
+          <tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--muted)">Memuat...</td></tr>
         </tbody>
       </table>
       <!-- Rule editor -->
@@ -356,6 +358,11 @@
     <div class="form-group">
       <label>Nama Regional *</label>
       <input type="text" id="fRegionName" placeholder="Contoh: Bali, Kalimantan Timur">
+    </div>
+    <div class="form-group">
+      <label>Nomor WhatsApp PIC</label>
+      <input type="text" id="fRegionWA" placeholder="Contoh: 081234567890">
+      <div style="font-size:11px;color:var(--muted);margin-top:4px">Format bebas, awalan 0 atau 62 sama-sama bisa</div>
     </div>
     <div class="form-group" style="display:flex;align-items:center;gap:10px">
       <input type="checkbox" id="fRegionActive" checked style="width:auto">
@@ -684,12 +691,14 @@ async function loadRegions() {
 function renderRegionTable() {
   const tbody = document.getElementById('regionTableBody');
   if (!regions.length) {
-    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;padding:2rem;color:var(--muted)">Belum ada regional.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--muted)">Belum ada regional.</td></tr>';
     return;
   }
   tbody.innerHTML = regions.map(r => `
     <tr>
       <td class="td-name">${r.name}</td>
+      <td>${r.pic_name ? `<span style="font-weight:500">👤 ${r.pic_name}</span>` : '<span style="color:var(--muted)">—</span>'}</td>
+      <td>${r.wa_number ? `<span style="font-family:monospace;font-size:12px">${r.wa_number}</span>` : '<span style="color:var(--muted)">—</span>'}</td>
       <td><span class="tag ${r.is_active ? 'tag-active' : 'tag-inactive'}">${r.is_active ? 'Aktif' : 'Nonaktif'}</span></td>
       <td>
         <button class="btn-edit" onclick="openRuleEditor(${r.id},'${r.name.replace(/'/g,"\\'")}')">⚙ Atur Kategori</button>
@@ -767,6 +776,8 @@ function openRegionModal() {
   document.getElementById('regionModalTitle').textContent = 'Tambah Regional';
   document.getElementById('editRegionId').value = '';
   document.getElementById('fRegionName').value  = '';
+  document.getElementById('fRegionPIC').value      = '';
+  document.getElementById('fRegionWA').value       = '';
   document.getElementById('fRegionActive').checked = true;
   document.getElementById('regionModal').classList.add('open');
 }
@@ -775,6 +786,8 @@ function editRegion(id, name, isActive) {
   document.getElementById('regionModalTitle').textContent = 'Edit Regional';
   document.getElementById('editRegionId').value    = id;
   document.getElementById('fRegionName').value     = name;
+  document.getElementById('fRegionPIC').value      = r.pic_name || '';
+  document.getElementById('fRegionWA').value       = r.wa_number || '';
   document.getElementById('fRegionActive').checked = isActive;
   document.getElementById('regionModal').classList.add('open');
 }
@@ -782,9 +795,12 @@ function editRegion(id, name, isActive) {
 async function saveRegion() {
   const id       = document.getElementById('editRegionId').value;
   const name     = document.getElementById('fRegionName').value.trim();
+  const picName  = document.getElementById('fRegionPIC').value.trim();
+  const waNumber = document.getElementById('fRegionWA').value.trim();
   const isActive = document.getElementById('fRegionActive').checked;
   if (!name) { showToast('Nama regional wajib diisi.'); return; }
 
+  const payload = { name, pic_name: picName || null, wa_number: waNumber || null, is_active: isActive };
   if (id) {
     await sb.from('regions').update({ name, is_active: isActive }).eq('id', id);
   } else {
