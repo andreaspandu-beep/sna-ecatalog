@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>eCatalog — PT. Saka NiagaSukses Abadi</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Playfair+Display:wght@700&display=swap');
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --brand:#1B4F72;--brand-light:#2980B9;--brand-accent:#E67E22;--brand-dark:#0D2B3E;
+    --bg:#F5F7FA;--white:#fff;--text:#1a2332;--muted:#6b7a8d;--border:#DDE3EC;
+  }
+  body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--text)}
+
+  /* HEADER */
+  .header{background:linear-gradient(135deg,#0D2B3E 0%,#1B4F72 60%,#2471A3 100%);padding:2rem 2rem 1.5rem;position:relative;overflow:hidden}
+  .header::before{content:'';position:absolute;right:-40px;top:-40px;width:220px;height:220px;border:44px solid rgba(255,255,255,0.05);border-radius:50%}
+  .header::after{content:'';position:absolute;right:70px;bottom:-70px;width:160px;height:160px;border:32px solid rgba(255,255,255,0.04);border-radius:50%}
+  .logo-area{display:flex;align-items:center;gap:1rem;margin-bottom:1.2rem;position:relative}
+  .logo-box{width:52px;height:52px;background:var(--brand-accent);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;color:#fff;font-family:'Playfair Display',serif;flex-shrink:0}
+  .company-name{color:#fff;font-size:15px;font-weight:600;line-height:1.3}
+  .company-sub{color:rgba(255,255,255,0.6);font-size:12px;margin-top:2px}
+  .header h1{font-family:'Playfair Display',serif;color:#fff;font-size:30px;line-height:1.2;position:relative}
+  .header p{color:rgba(255,255,255,0.7);font-size:13px;margin-top:6px;position:relative}
+  .badges{display:flex;gap:8px;margin-top:1rem;flex-wrap:wrap;position:relative}
+  .badge{background:rgba(255,255,255,0.12);color:rgba(255,255,255,0.85);font-size:11px;padding:4px 10px;border-radius:20px;border:1px solid rgba(255,255,255,0.2)}
+
+  /* TOOLBAR */
+  .toolbar{background:var(--white);padding:0.85rem 1.5rem;border-bottom:1px solid var(--border);display:flex;gap:10px;align-items:center;position:sticky;top:0;z-index:10;box-shadow:0 2px 8px rgba(0,0,0,0.06)}
+  .toolbar input{flex:1;border:1px solid var(--border);border-radius:8px;padding:8px 14px;font-size:14px;font-family:'Plus Jakarta Sans',sans-serif;outline:none;background:#F8FAFB;color:var(--text);transition:border 0.2s}
+  .toolbar input:focus{border-color:var(--brand-light);background:#fff}
+  .toolbar input::placeholder{color:var(--muted)}
+
+  /* FILTERS */
+  .filters{display:flex;gap:6px;flex-wrap:wrap;padding:0.85rem 1.5rem;border-bottom:1px solid var(--border);background:var(--white)}
+  .filter-btn{border:1px solid var(--border);background:transparent;color:var(--muted);font-size:12px;padding:5px 14px;border-radius:20px;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:all 0.2s}
+  .filter-btn:hover{border-color:var(--brand);color:var(--brand)}
+  .filter-btn.active{background:var(--brand);color:#fff;border-color:var(--brand)}
+
+  /* GRID */
+  .grid-header{display:flex;justify-content:space-between;align-items:center;padding:0.85rem 1.5rem;background:var(--white);border-bottom:1px solid var(--border)}
+  .grid-count{font-size:13px;color:var(--muted)}
+  .grid-count span{color:var(--brand);font-weight:600}
+
+  .products-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1px;background:var(--border)}
+  .product-card{background:var(--white);padding:1.25rem;cursor:pointer;transition:all 0.2s;display:flex;flex-direction:column;animation:fadeIn 0.3s ease}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+  .product-card:hover{background:#F0F6FC;box-shadow:0 4px 20px rgba(27,79,114,0.12)}
+  .product-img{width:100%;height:140px;object-fit:cover;border-radius:8px;background:#EEF2F7;margin-bottom:0.9rem;display:block}
+  .product-img-placeholder{width:100%;height:140px;border-radius:8px;background:linear-gradient(135deg,#EEF2F7,#DDE3EC);margin-bottom:0.9rem;display:none;align-items:center;justify-content:center;font-size:36px}
+  .product-cat{font-size:10px;text-transform:uppercase;letter-spacing:0.8px;color:var(--brand-accent);font-weight:600;margin-bottom:4px}
+  .product-name{font-size:15px;font-weight:600;color:var(--text);line-height:1.3;margin-bottom:6px}
+  .product-desc{font-size:12px;color:var(--muted);line-height:1.5;flex:1}
+  .product-footer{margin-top:0.8rem;padding-top:0.8rem;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+  .inquiry-btn{font-size:11px;background:var(--brand);color:#fff;border:none;padding:5px 12px;border-radius:6px;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;font-weight:500;transition:background 0.2s}
+  .inquiry-btn:hover{background:var(--brand-light)}
+  .stock-badge{font-size:10px;padding:3px 8px;border-radius:4px;font-weight:500}
+  .stock-available{color:#27AE60;background:#EAFBF0}
+  .stock-empty{color:#E74C3C;background:#FDEDEC}
+
+  /* MODAL */
+  .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:100;align-items:center;justify-content:center;padding:1rem}
+  .modal-overlay.open{display:flex}
+  .modal{background:var(--white);border-radius:16px;max-width:540px;width:100%;max-height:90vh;overflow-y:auto;position:relative;animation:slideUp 0.25s ease}
+  @keyframes slideUp{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+  .modal-img-wrap{position:relative}
+  .modal-img{width:100%;height:220px;object-fit:cover;border-radius:16px 16px 0 0;display:block}
+  .modal-img-placeholder{width:100%;height:220px;border-radius:16px 16px 0 0;background:linear-gradient(135deg,#1B4F72,#2980B9);display:flex;align-items:center;justify-content:center;font-size:72px}
+  .modal-body{padding:1.5rem}
+  .modal-cat{font-size:11px;text-transform:uppercase;letter-spacing:0.8px;color:var(--brand-accent);font-weight:600;margin-bottom:6px}
+  .modal-title{font-size:22px;font-weight:700;color:var(--text);margin-bottom:10px;font-family:'Playfair Display',serif}
+  .modal-desc{font-size:14px;color:var(--muted);line-height:1.7;margin-bottom:1rem}
+  .modal-specs{background:#F5F7FA;border-radius:10px;padding:1rem;margin-bottom:1.2rem}
+  .modal-spec-row{display:flex;justify-content:space-between;font-size:13px;padding:5px 0;border-bottom:1px solid var(--border)}
+  .modal-spec-row:last-child{border:none}
+  .modal-spec-label{color:var(--muted)}
+  .modal-spec-val{font-weight:500;color:var(--text)}
+  .modal-actions{display:flex;gap:8px}
+  .wa-btn{flex:1;background:#25D366;color:#fff;border:none;padding:11px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:background 0.2s}
+  .wa-btn:hover{background:#1ebe5d}
+  .close-btn{background:#F5F7FA;color:var(--text);border:1px solid var(--border);padding:11px 18px;border-radius:8px;font-size:14px;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:background 0.2s}
+  .close-btn:hover{background:#EEF2F7}
+  .modal-close-x{position:absolute;top:10px;right:10px;background:rgba(255,255,255,0.9);border:none;width:34px;height:34px;border-radius:50%;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;z-index:5;box-shadow:0 1px 4px rgba(0,0,0,0.15)}
+
+  /* LOADING */
+  .loading{padding:4rem;text-align:center;background:var(--white);grid-column:1/-1}
+  .spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--brand);border-radius:50%;animation:spin 0.7s linear infinite;margin:0 auto 1rem}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .no-results{padding:3rem;text-align:center;background:var(--white);grid-column:1/-1}
+  .no-results p{color:var(--muted);font-size:14px}
+
+  /* FOOTER */
+  .site-footer{background:var(--brand-dark);padding:1.75rem 2rem;display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.5rem}
+  .footer-label{color:rgba(255,255,255,0.45);font-size:10px;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:5px}
+  .footer-val{color:#fff;font-size:13px;font-weight:500;line-height:1.5}
+  .footer-muted{color:rgba(255,255,255,0.55);font-size:12px;margin-top:3px}
+
+  @media(max-width:600px){
+    .products-grid{grid-template-columns:1fr 1fr}
+    .header h1{font-size:22px}
+    .site-footer{grid-template-columns:1fr}
+    .toolbar{flex-direction:column;align-items:stretch}
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== HEADER ===== -->
+<div class="header">
+  <div class="logo-area"> 
+      <img src="https://raw.githubusercontent.com/andreaspandu-beep/sna-ecatalog/main/LOGO SNA_PUTIH.png" 
+       alt="Logo"
+       style="height:48px; width:auto;">
+    <div>
+      <div class="company-name">PT. Saka NiagaSukses Abadi</div>
+      <div class="company-sub">Distributor Bahan Bangunan</div>
+    </div>
+  </div>
+  <h1>eCatalog Produk</h1>
+  <p>Bahan bangunan berkualitas untuk proyek Anda — Bali, NTB, NTT &amp; Kaltim</p>
+  <div class="badges">
+    <span class="badge">✓ Distributor Resmi</span>
+    <span class="badge">✓ Stok Selalu Update</span>
+    <span class="badge">✓ Pengiriman Area Luas</span>
+  </div>
+</div>
+
+<!-- ===== SEARCH ===== -->
+<div class="toolbar">
+  <input type="text" id="searchInput" placeholder="🔍  Cari produk... (triplek, pipa, besi...)" oninput="filterProducts()">
+  <select id="regionSelect" onchange="setRegion()" style="
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:8px 10px;
+    font-size:14px;
+    font-family:'Plus Jakarta Sans',sans-serif;
+    background:#F8FAFB;
+    color:var(--text);
+    outline:none;
+    cursor:pointer;
+  ">
+    <option value="ALL">Semua Regional</option>
+  </select>
+</div>
+
+<!-- ===== FILTERS KATEGORI ===== -->
+<div class="filters" id="filterBtns"></div>
+
+<!-- ===== FILTERS BRAND ===== -->
+<div class="filters" id="brandFilterBtns" style="background:#FAFBFD;border-top:none"></div>
+
+<!-- ===== GRID HEADER ===== -->
+<div class="grid-header">
+  <div class="grid-count">Menampilkan <span id="countDisplay">—</span> produk</div>
+</div>
+
+<!-- ===== PRODUCT GRID ===== -->
+<div class="products-grid" id="productsGrid">
+  <div class="loading">
+    <div class="spinner"></div>
+    <p style="color:var(--muted);font-size:14px">Memuat produk...</p>
+  </div>
+</div>
+
+<!-- ===== FOOTER ===== -->
+<div class="site-footer">
+  <div>
+    <div class="footer-label">Kantor Pusat</div>
+    <div class="footer-val">Jl. By Pass Ngurah Rai No.117X<br>Sanur, Denpasar Selatan, Bali 80227</div>
+  </div>
+  <div>
+    <div class="footer-label">Telepon</div>
+    <div class="footer-val">(0361) 461 688</div>
+    <div class="footer-muted">Hunting Line</div>
+  </div>
+  <div>
+    <div class="footer-label">Email</div>
+    <div class="footer-val">info@sakaniagasuksesabadi.com</div>
+    <div class="footer-muted">Senin – Sabtu, 08.00–17.00</div>
+  </div>
+</div>
+
+<!-- ===== MODAL ===== -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModalBg(event)">
+  <div class="modal" id="modalBox">
+    <button class="modal-close-x" onclick="closeModal()">✕</button>
+    <div id="modalContent"></div>
+  </div>
+</div>
+
+<script>
+// =============================================
+// KONFIGURASI SUPABASE
+// =============================================
+const SUPABASE_URL     = 'https://oilfibhfinwmkxrytwon.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9pbGZpYmhmaW53bWt4cnl0d29uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0NDIwNjUsImV4cCI6MjA5MzAxODA2NX0.ErDJnLciFltzyFuQwkvvfRODYmENzP2-wcGADJwmZco';
+const sb               = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// Nomor & nama WA fallback (dipakai saat belum pilih regional)
+const WA_DEFAULT      = '62361461688';
+const WA_NAME_DEFAULT = 'Customer Service';
+
+// =============================================
+// STATE
+// =============================================
+let activeRegion    = 'ALL';
+let activeRegionPIC = null;
+let allRegions      = [];
+let blockedCatIds   = new Set();
+let allProducts     = [];
+let allCategories   = [];
+let allBrands       = [];
+let activeFilter    = 'Semua';
+let activeBrand     = 'Semua';
+let searchTerm      = '';
+
+// =============================================
+// LOAD DATA
+// =============================================
+async function loadProducts() {
+  // Load regions untuk dropdown
+  const { data: regData } = await sb
+    .from('regions')
+    .select('*')
+    .eq('is_active', true)
+    .order('name');
+  allRegions = regData || [];
+
+  // Populate dropdown regional
+  const sel = document.getElementById('regionSelect');
+  sel.innerHTML = `<option value="ALL">Semua Regional</option>`
+    + allRegions.map(r => `<option value="${r.id}">${r.name}</option>`).join('');
+
+  // Load produk
+  const { data, error } = await sb
+    .from('products')
+    .select('*, categories(name), brands(name, logo_url)')
+    .eq('is_active', true)
+    .order('name');
+
+  if (error) {
+    console.error(error);
+    document.getElementById('productsGrid').innerHTML =
+      '<div class="no-results"><p>Gagal memuat produk. Silakan refresh halaman.</p></div>';
+    return;
+  }
+
+  allProducts = data.map(p => ({
+    ...p,
+    cat:       p.categories?.name || 'Lainnya',
+    brandName: p.brands?.name     || null,
+    brandLogo: p.brands?.logo_url || null,
+  }));
+
+  const cats = [...new Set(allProducts.map(p => p.cat))].sort();
+  allCategories = ['Semua', ...cats];
+
+  // Brands yang benar-benar dipakai produk aktif
+  const { data: brandData } = await sb
+    .from('brands')
+    .select('*')
+    .eq('is_active', true)
+    .order('name');
+  allBrands = brandData || [];
+
+  renderFilters();
+  renderBrandFilters();
+  renderGrid();
+}
+
+// =============================================
+// RENDER FILTERS
+// =============================================
+function renderFilters() {
+  const container = document.getElementById('filterBtns');
+  container.innerHTML = allCategories.map(c => `
+    <button class="filter-btn${c === activeFilter ? ' active' : ''}"
+      onclick="setFilter('${c}')">${c}</button>
+  `).join('');
+}
+
+// =============================================
+// RENDER BRAND FILTERS
+// =============================================
+function renderBrandFilters() {
+  const container = document.getElementById('brandFilterBtns');
+  if (!allBrands.length) { container.style.display = 'none'; return; }
+  container.style.display = 'flex';
+  container.innerHTML = [{ id: 'Semua', name: 'Semua Brand', logo_url: null }, ...allBrands].map(b => `
+    <button class="filter-btn brand-btn${b.id === activeBrand || (b.id === 'Semua' && activeBrand === 'Semua') ? ' active' : ''}"
+      onclick="setBrand('${b.id}')" style="display:flex;align-items:center;gap:5px">
+      ${b.logo_url ? `<img src="${b.logo_url}" style="height:14px;width:auto;object-fit:contain" onerror="this.remove()">` : ''}
+      ${b.name}
+    </button>
+  `).join('');
+}
+
+function setBrand(brandId) {
+  activeBrand = brandId;
+  renderBrandFilters();
+  renderGrid();
+}
+
+// =============================================
+// RENDER GRID
+// =============================================
+function renderGrid() {
+  const filtered = allProducts.filter(p => {
+    const matchCat    = activeFilter === 'Semua' || p.cat === activeFilter;
+    const matchBrand  = activeBrand  === 'Semua' || p.brand_id === activeBrand || String(p.brand_id) === String(activeBrand);
+    const s           = searchTerm.toLowerCase();
+    const matchSearch = !s
+      || p.name.toLowerCase().includes(s)
+      || (p.description || '').toLowerCase().includes(s)
+      || p.cat.toLowerCase().includes(s)
+      || (p.brandName || '').toLowerCase().includes(s);
+    const matchRegion = !blockedCatIds.has(p.category_id);
+    return matchCat && matchBrand && matchSearch && matchRegion;
+  });
+
+  document.getElementById('countDisplay').textContent = filtered.length;
+
+  if (filtered.length === 0) {
+    document.getElementById('productsGrid').innerHTML =
+      '<div class="no-results"><p>Produk tidak ditemukan. Coba kata kunci lain.</p></div>';
+    return;
+  }
+
+  document.getElementById('productsGrid').innerHTML = filtered.map(p => {
+    const hasImg    = p.image_url && p.image_url.trim() !== '';
+    const stockClass = p.is_available !== false ? 'stock-available' : 'stock-empty';
+    const stockLabel = p.is_available !== false ? '✓ Tersedia' : '✗ Habis';
+    const desc       = (p.description || '').substring(0, 85);
+
+    return `
+      <div class="product-card" onclick="openModal(${p.id})">
+        ${hasImg
+          ? `<img class="product-img" src="${p.image_url}" alt="${p.name}"
+               onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
+          : ''}
+        <div class="product-img-placeholder" style="${hasImg ? '' : 'display:flex'}">📦</div>
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
+          <div class="product-cat">${p.cat}</div>
+          ${p.brandName ? `<span style="font-size:10px;background:#F0E6FF;color:#6B21A8;padding:2px 7px;border-radius:10px;font-weight:600">${p.brandName}</span>` : ''}
+        </div>
+        <div class="product-name">${p.name}</div>
+        <div class="product-desc">${desc}${desc.length >= 85 ? '…' : ''}</div>
+        <div class="product-footer">
+          <span class="stock-badge ${stockClass}">${stockLabel}</span>
+          <button class="inquiry-btn" onclick="event.stopPropagation();inquire('${p.name.replace(/'/g,"\\'")}')">
+            Tanya Harga
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// =============================================
+// FILTER & SEARCH
+// =============================================
+function setFilter(cat) {
+  activeFilter = cat;
+  renderFilters();
+  renderGrid();
+}
+
+function filterProducts() {
+  searchTerm = document.getElementById('searchInput').value;
+  renderGrid();
+}
+
+async function setRegion() {
+  activeRegion    = document.getElementById('regionSelect').value;
+  blockedCatIds   = new Set();
+  activeRegionPIC = null;
+
+  if (activeRegion !== 'ALL') {
+    // Ambil data PIC region yang dipilih
+    const region = allRegions.find(r => String(r.id) === String(activeRegion));
+    if (region && region.pic_name) {
+      activeRegionPIC = { pic_name: region.pic_name, wa_number: region.wa_number };
+    }
+
+    // Ambil kategori yang diblok untuk region ini
+    const { data } = await sb
+      .from('region_category_rules')
+      .select('category_id')
+      .eq('region_id', activeRegion)
+      .eq('is_blocked', true);
+    (data || []).forEach(r => blockedCatIds.add(r.category_id));
+  }
+
+  renderPICBanner();
+  renderGrid();
+}
+
+// =============================================
+// BANNER PIC REGIONAL
+// =============================================
+function renderPICBanner() {
+  let banner = document.getElementById('picBanner');
+
+  if (!activeRegionPIC) {
+    if (banner) banner.remove();
+    return;
+  }
+
+  const wa  = activeRegionPIC.wa_number.replace(/\D/g, '').replace(/^0/, '62');
+  const msg = encodeURIComponent('Halo, saya ingin bertanya mengenai produk katalog.');
+  const html = `
+    <div id="picBanner" style="
+      background:linear-gradient(90deg,#1B4F72,#2980B9);
+      padding:10px 1.5rem;
+      display:flex;align-items:center;justify-content:space-between;
+      flex-wrap:wrap;gap:8px;
+    ">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="width:34px;height:34px;background:rgba(255,255,255,0.2);border-radius:50%;
+          display:flex;align-items:center;justify-content:center;font-size:16px">👤</div>
+        <div>
+          <div style="color:rgba(255,255,255,0.7);font-size:10px;text-transform:uppercase;letter-spacing:0.6px">Sales Representative</div>
+          <div style="color:#fff;font-size:13px;font-weight:600">${activeRegionPIC.pic_name}</div>
+        </div>
+      </div>
+      <a href="https://wa.me/${wa}?text=${msg}" target="_blank"
+        style="background:#25D366;color:#fff;border-radius:8px;padding:7px 14px;
+          font-size:12px;font-weight:600;text-decoration:none;display:flex;align-items:center;gap:6px;">
+        💬 Chat ${activeRegionPIC.pic_name}
+      </a>
+    </div>
+  `;
+
+  if (banner) {
+    banner.outerHTML = html;
+  } else {
+    document.getElementById('filterBtns').insertAdjacentHTML('beforebegin', html);
+  }
+}
+
+// =============================================
+// MODAL
+// =============================================
+async function openModal(id) {
+  const p = allProducts.find(x => x.id === id);
+  if (!p) return;
+
+  const { data: specs } = await sb
+    .from('product_specs')
+    .select('label, value, sort_order')
+    .eq('product_id', id)
+    .order('sort_order');
+
+  const specsHtml = specs && specs.length > 0
+    ? specs.map(s => `
+        <div class="modal-spec-row">
+          <span class="modal-spec-label">${s.label}</span>
+          <span class="modal-spec-val">${s.value}</span>
+        </div>`).join('')
+    : '<div style="font-size:13px;color:var(--muted)">Spesifikasi belum tersedia.</div>';
+
+  const hasImg = p.image_url && p.image_url.trim() !== '';
+
+  // Label tombol WA sesuai PIC regional
+  const picLabel = activeRegionPIC
+    ? `💬 Hubungi ${activeRegionPIC.pic_name} via WhatsApp`
+    : '💬 Hubungi via WhatsApp';
+
+  document.getElementById('modalContent').innerHTML = `
+    <div class="modal-img-wrap">
+      ${hasImg
+        ? `<img class="modal-img" src="${p.image_url}" alt="${p.name}"
+             onerror="this.style.display='none';this.nextSibling.style.display='flex'">
+           <div class="modal-img-placeholder" style="display:none">📦</div>`
+        : `<div class="modal-img-placeholder" style="display:flex">📦</div>`}
+    </div>
+    <div class="modal-body">
+      <div class="modal-cat">${p.cat}${p.brandName ? ` &nbsp;·&nbsp; <span style="color:#6B21A8;font-weight:700">${p.brandName}</span>` : ''}</div>
+      <div class="modal-title">${p.name}</div>
+      <div class="modal-desc">${p.description || 'Hubungi kami untuk informasi lebih lanjut.'}</div>
+      <div class="modal-specs">${specsHtml}</div>
+      <div class="modal-actions">
+        <button class="wa-btn" onclick="inquire('${p.name.replace(/'/g,"\\'")}')">
+          ${picLabel}
+        </button>
+        <button class="close-btn" onclick="closeModal()">Tutup</button>
+      </div>
+    </div>
+  `;
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+}
+
+function closeModalBg(e) {
+  if (e.target === document.getElementById('modalOverlay')) closeModal();
+}
+
+// =============================================
+// WHATSAPP INQUIRY
+// =============================================
+function inquire(name) {
+  const msg = encodeURIComponent(
+    `Halo, saya ingin menanyakan informasi dan harga untuk produk:\n\n*${name}*\n\nMohon informasinya. Terima kasih.`
+  );
+  // Gunakan nomor PIC regional jika ada, fallback ke nomor default
+  let number = WA_DEFAULT;
+  if (activeRegionPIC && activeRegionPIC.wa_number) {
+    number = activeRegionPIC.wa_number.replace(/\D/g, '').replace(/^0/, '62');
+  }
+  window.open(`https://wa.me/${number}?text=${msg}`, '_blank');
+}
+
+// =============================================
+// INIT
+// =============================================
+loadProducts();
+</script>
+</body>
+</html>
